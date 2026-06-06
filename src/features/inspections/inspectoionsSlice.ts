@@ -8,7 +8,7 @@ export type WorkflowTab =
   | 'Preparation'
   | 'Checklist';
 
-export type InspectionStatus = 'Compliant' | 'Non-Compliant' | 'Pending' | 'N/A';
+export type InspectionStatus = 'pending' | 'compliant' | 'non-compliant' | 'n/a';
 
 export interface InspectionItem {
   id: string;
@@ -72,26 +72,26 @@ const defaultTemplate: InspectionSection[] = [
     id: 'vessel-condition',
     title: 'Vessel Condition',
     items: [
-      { id: 'hull', question: 'Hull structure condition inspected and verified?', status: 'Pending', comments: '' },
-      { id: 'deck', question: 'Deck area, rails, and access points are safe?', status: 'Pending', comments: '' },
-      { id: 'engine', question: 'Engine room condition meets inspection requirements?', status: 'Pending', comments: '' },
+      { id: 'hull', question: 'Hull structure condition inspected and verified?', status: 'pending', comments: '' },
+      { id: 'deck', question: 'Deck area, rails, and access points are safe?', status: 'pending', comments: '' },
+      { id: 'engine', question: 'Engine room condition meets inspection requirements?', status: 'pending', comments: '' },
     ],
   },
   {
     id: 'safety-compliance',
     title: 'Safety Compliance',
     items: [
-      { id: 'safety-equipment', question: 'Safety equipment is present and operational?', status: 'Pending', comments: '' },
-      { id: 'fire-system', question: 'Fire fighting system is available and compliant?', status: 'Pending', comments: '' },
-      { id: 'lifeboats', question: 'Lifeboats and rescue boats are inspected?', status: 'Pending', comments: '' },
+      { id: 'safety-equipment', question: 'Safety equipment is present and operational?', status: 'pending', comments: '' },
+      { id: 'fire-system', question: 'Fire fighting system is available and compliant?', status: 'pending', comments: '' },
+      { id: 'lifeboats', question: 'Lifeboats and rescue boats are inspected?', status: 'pending', comments: '' },
     ],
   },
   {
     id: 'documentation',
     title: 'Documentation',
     items: [
-      { id: 'certificates', question: 'Vessel certificates and documents are valid?', status: 'Pending', comments: '' },
-      { id: 'navigation', question: 'Navigation systems and records are verified?', status: 'Pending', comments: '' },
+      { id: 'certificates', question: 'Vessel certificates and documents are valid?', status: 'pending', comments: '' },
+      { id: 'navigation', question: 'Navigation systems and records are verified?', status: 'pending', comments: '' },
     ],
   },
 ];
@@ -100,10 +100,10 @@ const calculateProgress = (template: InspectionSection[]): InspectionProgress =>
   const items = template.flatMap((section) => section.items);
 
   return {
-    compliant: items.filter((item) => item.status === 'Compliant').length,
-    nonCompliant: items.filter((item) => item.status === 'Non-Compliant').length,
-    pending: items.filter((item) => item.status === 'Pending').length,
-    na: items.filter((item) => item.status === 'N/A').length,
+    compliant: items.filter((item) => item.status === 'compliant').length,
+    nonCompliant: items.filter((item) => item.status === 'non-compliant').length,
+    pending: items.filter((item) => item.status === 'pending').length,
+    na: items.filter((item) => item.status === 'n/a').length,
   };
 };
 
