@@ -8,10 +8,12 @@ export type WorkflowTab =
   | 'Preparation'
   | 'Checklist';
 
+export type InspectionStatus = 'Compliant' | 'Non-Compliant' | 'Pending' | 'N/A';
+
 export interface InspectionItem {
   id: string;
-  title: string;
-  status: string;
+  question: string;
+  status: InspectionStatus;
   comments: string;
 }
 
@@ -19,6 +21,13 @@ export interface InspectionSection {
   id: string;
   title: string;
   items: InspectionItem[];
+}
+
+export interface InspectionProgress {
+  compliant: number;
+  nonCompliant: number;
+  pending: number;
+  na: number;
 }
 
 export interface InspectionPayload {
@@ -63,45 +72,45 @@ const defaultTemplate: InspectionSection[] = [
     id: 'vessel-condition',
     title: 'Vessel Condition',
     items: [
-      { id: 'hull', title: 'Hull Structure', status: 'Pending', comments: '' },
-      { id: 'deck', title: 'Deck Condition', status: 'Pending', comments: '' },
-      { id: 'engine', title: 'Engine Room', status: 'Pending', comments: '' },
+      { id: 'hull', question: 'Hull structure condition inspected and verified?', status: 'Pending', comments: '' },
+      { id: 'deck', question: 'Deck area, rails, and access points are safe?', status: 'Pending', comments: '' },
+      { id: 'engine', question: 'Engine room condition meets inspection requirements?', status: 'Pending', comments: '' },
     ],
   },
   {
     id: 'safety-compliance',
     title: 'Safety Compliance',
     items: [
-      { id: 'safety-equipment', title: 'Safety Equipment', status: 'Pending', comments: '' },
-      { id: 'fire-system', title: 'Fire Fighting System', status: 'Pending', comments: '' },
-      { id: 'lifeboats', title: 'Lifeboats / Rescue Boats', status: 'Pending', comments: '' },
+      { id: 'safety-equipment', question: 'Safety equipment is present and operational?', status: 'Pending', comments: '' },
+      { id: 'fire-system', question: 'Fire fighting system is available and compliant?', status: 'Pending', comments: '' },
+      { id: 'lifeboats', question: 'Lifeboats and rescue boats are inspected?', status: 'Pending', comments: '' },
     ],
   },
   {
     id: 'documentation',
     title: 'Documentation',
     items: [
-      { id: 'certificates', title: 'Certificates & Documents', status: 'Pending', comments: '' },
-      { id: 'navigation', title: 'Navigation Systems', status: 'Pending', comments: '' },
+      { id: 'certificates', question: 'Vessel certificates and documents are valid?', status: 'Pending', comments: '' },
+      { id: 'navigation', question: 'Navigation systems and records are verified?', status: 'Pending', comments: '' },
     ],
   },
 ];
 
-const calculateProgress = (template: InspectionSection[]) => {
+const calculateProgress = (template: InspectionSection[]): InspectionProgress => {
   const items = template.flatMap((section) => section.items);
-  if (items.length === 0) return 0;
 
-  const completed = items.filter(
-    (item) => item.status !== 'Pending' && item.status !== ''
-  ).length;
-
-  return Math.round((completed / items.length) * 100);
+  return {
+    compliant: items.filter((item) => item.status === 'Compliant').length,
+    nonCompliant: items.filter((item) => item.status === 'Non-Compliant').length,
+    pending: items.filter((item) => item.status === 'Pending').length,
+    na: items.filter((item) => item.status === 'N/A').length,
+  };
 };
 
 interface InspectionsState {
   inspections: any[];
   currentTemplate: InspectionSection[];
-  progress: number;
+  progress: InspectionProgress;
   showCreationForm: boolean;
   activeWorkflowTab: WorkflowTab;
   loading: boolean;
@@ -111,23 +120,23 @@ interface InspectionsState {
 const initialState: InspectionsState = {
   inspections: [],
   currentTemplate: defaultTemplate,
-  progress: 0,
+  progress: calculateProgress(defaultTemplate),
   showCreationForm: false,
   activeWorkflowTab: 'Overview',
   loading: false,
   error: null,
 };
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
 export const fetchInspectionsFromDb = createAsyncThunk<any[], void, { rejectValue: string }>(
   'inspections/fetchInspections',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/inspections`);
+      const response = await fetch(`${API_BASE_URL}/inspections`);
       const json = await response.json();
 
-      if (!json.success) {
-        throw new Error(json.message || 'Failed to fetch inspections.');
-      }
+      if (!json.success) throw new Error(json.message || 'Failed to fetch inspections.');
 
       return json.inspections || [];
     } catch (error: any) {
@@ -140,7 +149,7 @@ export const submitNewInspection = createAsyncThunk<any, InspectionPayload, { re
   'inspections/submitNewInspection',
   async (payload, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/inspections/add`, {
+      const response = await fetch(`${API_BASE_URL}/inspections/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -148,9 +157,7 @@ export const submitNewInspection = createAsyncThunk<any, InspectionPayload, { re
 
       const json = await response.json();
 
-      if (!json.success) {
-        throw new Error(json.message || 'Failed to create inspection.');
-      }
+      if (!json.success) throw new Error(json.message || 'Failed to create inspection.');
 
       return json.inspection;
     } catch (error: any) {
@@ -172,7 +179,10 @@ const inspectionsSlice = createSlice({
     },
 
     updateItemStatus: (state, action) => {
-      const { itemId, status } = action.payload;
+      const { itemId, status } = action.payload as {
+        itemId: string;
+        status: InspectionStatus;
+      };
 
       state.currentTemplate = state.currentTemplate.map((section) => ({
         ...section,
@@ -185,7 +195,10 @@ const inspectionsSlice = createSlice({
     },
 
     updateItemComments: (state, action) => {
-      const { itemId, comments } = action.payload;
+      const { itemId, comments } = action.payload as {
+        itemId: string;
+        comments: string;
+      };
 
       state.currentTemplate = state.currentTemplate.map((section) => ({
         ...section,
