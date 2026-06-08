@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Shield } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from "../api/api";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -16,11 +17,14 @@ const handleSubmit = async (e: React.FormEvent) => {
   setLoading(true);
 
   try {
-    const response = await axios.post('/api/auth/login', {
-      email,
-      password,
-      role,
-    });
+    const response = await axios.post(
+  `${API_BASE_URL}/api/auth/login`,
+  {
+    email,
+    password,
+    role,
+  }
+);
 
     localStorage.setItem('token', response.data.token);
     localStorage.setItem('user', JSON.stringify(response.data.user));
