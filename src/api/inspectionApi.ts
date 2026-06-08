@@ -1,8 +1,10 @@
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 export const createInspection = async (payload: any) => {
-  const response = await fetch('http://localhost:5000/inspections/add', {
-    method: 'POST',
+  const response = await fetch(`${BASE_URL}/inspections/add`, {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
   });
@@ -10,18 +12,18 @@ export const createInspection = async (payload: any) => {
   const json = await response.json();
 
   if (!json.success) {
-    throw new Error(json.message || 'Failed to create inspection');
+    throw new Error(json.message || "Failed to create inspection");
   }
 
   return json.inspection;
 };
 
 export const getInspections = async () => {
-  const response = await fetch('http://localhost:5000/inspections');
+  const response = await fetch(`${BASE_URL}/inspections`);
   const json = await response.json();
 
   if (!json.success) {
-    throw new Error(json.message || 'Failed to fetch inspections');
+    throw new Error(json.message || "Failed to fetch inspections");
   }
 
   return json.inspections;

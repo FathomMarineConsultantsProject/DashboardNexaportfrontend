@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { type Expense } from "../../types/expense";
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 interface ExpensesState {
   expenses: Expense[];
   loading: boolean;
@@ -13,47 +15,58 @@ const initialState: ExpensesState = {
   error: null,
 };
 
-// 🌐 1. Fetch expenses from the PostgreSQL backend
 export const fetchExpensesFromDb = createAsyncThunk<
-  Expense[], 
-  void, 
+  Expense[],
+  void,
   { rejectValue: string }
 >(
   "expenses/fetchExpenses",
   async (_, { rejectWithValue }) => {
     try {
-      // 🌟 Aligned with backend mounting path standard
-      const response = await fetch("http://localhost:5000/expenses");
+      const response = await fetch(`${BASE_URL}/expenses`);
       const json = await response.json();
-      if (!json.success) throw new Error(json.message || "Failed to retrieve expense nodes.");
-      return json.expense || []; 
+
+      if (!json.success) {
+        throw new Error(json.message || "Failed to retrieve expenses.");
+      }
+
+      return json.expense || [];
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : "An unexpected server network issue occurred.";
+      const errorMsg =
+        err instanceof Error
+          ? err.message
+          : "An unexpected server network issue occurred.";
       return rejectWithValue(errorMsg);
     }
   }
 );
 
-// 🌐 2. Save a new expense to the PostgreSQL backend
 export const saveNewExpenseToDb = createAsyncThunk<
-  Expense, 
-  Omit<Expense, "id">, 
+  Expense,
+  Omit<Expense, "id">,
   { rejectValue: string }
 >(
   "expenses/saveExpense",
   async (newExpense, { rejectWithValue }) => {
     try {
-      // 🌟 Aligned with backend mounting path standard
-      const response = await fetch("http://localhost:5000/expenses/add", {
+      const response = await fetch(`${BASE_URL}/expenses/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newExpense),
       });
+
       const json = await response.json();
-      if (!json.success) throw new Error(json.message || "Database transaction rejected.");
-      return json.expense; 
+
+      if (!json.success) {
+        throw new Error(json.message || "Database transaction rejected.");
+      }
+
+      return json.expense;
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : "An unexpected server network issue occurred.";
+      const errorMsg =
+        err instanceof Error
+          ? err.message
+          : "An unexpected server network issue occurred.";
       return rejectWithValue(errorMsg);
     }
   }
@@ -77,8 +90,17 @@ export const expensesSlice = createSlice({
         state.loading = false;
         state.error = action.payload ?? "Failed to resolve expense ledger state.";
       })
+      .addCase(saveNewExpenseToDb.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(saveNewExpenseToDb.fulfilled, (state, action) => {
-        state.expenses.unshift(action.payload); 
+        state.loading = false;
+        state.expenses.unshift(action.payload);
+      })
+      .addCase(saveNewExpenseToDb.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload ?? "Failed to save expense.";
       });
   },
 });
